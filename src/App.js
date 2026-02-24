@@ -462,7 +462,7 @@ export default function App() {
   const efficiency = ((totalScore / maxPossibleScore) * 100).toFixed(1);
 
   const shareScore = () => {
-    const text = `Balledge 🏀\nGoal: Maximize ${
+    const text = `Balledgemaxxing 🏀\nGoal: Maximize ${
       STAT_LABELS[todayStat]
     }\nTotal: ${totalScore.toFixed(
       1
@@ -482,7 +482,7 @@ export default function App() {
         textAlign: "center",
       }}
     >
-      <h1 style={{ letterSpacing: "2px", margin: "10px 0" }}>BALLEDGE</h1>
+      <h1 style={{ letterSpacing: "2px", margin: "10px 0" }}>BALLEDGEMAXXING</h1>
 
       {/* NEW STAT INDICATOR */}
       <div
@@ -592,3 +592,4 @@ export default function App() {
     </div>
   );
 }
+
