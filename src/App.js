@@ -74,9 +74,32 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
     const val = getStatValue(s);
     const firstName = s.PLAYER_NAME.split(" ")[0];
 
-    // Add these new checks inside your existing handleLock if-else chain:
-    
-    if (config.max3PA && (s.FG3A ?? 0) > config.max3PA) {
+    // FIX: Declare the variable first!
+    let currentError = "";
+
+    if (year < config.startYear || year > config.endYear) {
+      currentError = `Outside Era!`;
+    }
+    else if (config.startsWith && !firstName.startsWith(config.startsWith)) {
+      currentError = `Wrong Name!`;
+    }
+    else if (config.conf && !TEAMS[config.conf].includes(s.TEAM_ABBREVIATION)) {
+      currentError = `Wrong Conference!`;
+    }
+    else if (config.div && !TEAMS[config.div].includes(s.TEAM_ABBREVIATION)) {
+      currentError = `Wrong Division!`;
+    }
+    else if (config.maxAge && s.AGE > config.maxAge) {
+      currentError = `Too old!`;
+    }
+    else if (config.maxGP && s.GP > config.maxGP) {
+      currentError = `Too many games!`;
+    }
+    else if (config.minWins && s.W < config.minWins) {
+      currentError = `Not enough wins!`;
+    }
+    // New 3PM Challenge checks
+    else if (config.max3PA && (s.FG3A ?? 0) > config.max3PA) {
       currentError = `Too many attempts! (${s.FG3A})`;
     }
     else if (config.minFT && (s.FT_PCT ?? 0) < config.minFT) {
@@ -97,7 +120,7 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
 
     if (currentError) {
       setError(currentError);
-      onWrongGuess(); // Track the penalty
+      onWrongGuess(); 
       return;
     }
 
@@ -226,4 +249,5 @@ export default function App() {
     </div>
   );
 }
+
 
