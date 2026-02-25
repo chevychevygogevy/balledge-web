@@ -17,27 +17,15 @@ const STAT_LABELS = { ppg: "Points Per Game", rpg: "Rebounds Per Game", apg: "As
 // Add new dates here to automate the game!
 const CHALLENGES = [
   {
-    date: "2026-02-25",
-    stat: "ppg",
-    prompts: [
-      { text: "East | First Name 'D'", conf: "East", startsWith: "D", startYear: 1947, endYear: 2026 },
-      { text: "Pacific | Age < 23", div: "Pacific", maxAge: 22, startYear: 1947, endYear: 2026 },
-      { text: "NBA | GP < 40", team: null, maxGP: 39, startYear: 1947, endYear: 2026 },
-      { text: "Atlantic | Wins > 50", div: "Atlantic", minWins: 51, startYear: 1947, endYear: 2026 },
-      { text: "West | FG% > 55%", conf: "West", minFG: 0.55, startYear: 1947, endYear: 2026 },
-      { text: "Any | 3PM > 200", team: null, min3PM: 201, startYear: 1947, endYear: 2026 },
-    ]
-  },
-  {
     date: "2026-02-26",
-    stat: "apg",
+    stat: "FG3M", // Goal: Maximize Total 3-Pointers Made
     prompts: [
-      { text: "Lakers or Celtics | Any Era", teamList: ["LAL", "BOS"], startYear: 1947, endYear: 2026 },
-      { text: "West | Age > 35", conf: "West", minAge: 36, startYear: 1947, endYear: 2026 },
-      { text: "NBA | Avg > 10 RPG", minRPG: 10, startYear: 1947, endYear: 2026 },
-      { text: "East | First Name 'J'", conf: "East", startsWith: "J", startYear: 1947, endYear: 2026 },
-      { text: "Any | Under 200lbs", maxWeight: 200, startYear: 1947, endYear: 2026 },
-      { text: "NBA | 65+ Wins Season", minWins: 65, startYear: 1947, endYear: 2026 },
+      { text: "Efficiency | Under 250 3PA", max3PA: 250, startYear: 1979, endYear: 2026 },
+      { text: "Sharpshooter | FT% > 90%", minFT: 0.90, startYear: 1979, endYear: 2026 },
+      { text: "Bad Team Floor Spacer | Negative +/-", maxPlusMinus: -0.1, startYear: 1979, endYear: 2026 },
+      { text: "Big Man Range | 15+ Double-Doubles", minDD2: 15, startYear: 1979, endYear: 2026 },
+      { text: "Specialist | Not Top 50 in Scoring", maxPPGRank: 51, startYear: 1979, endYear: 2026 },
+      { text: "Winner | Top 20 in +/- Rank", maxPMRank: 20, startYear: 1979, endYear: 2026 }
     ]
   }
 ];
@@ -86,14 +74,26 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
     const val = getStatValue(s);
     const firstName = s.PLAYER_NAME.split(" ")[0];
 
-    let currentError = "";
-    if (year < config.startYear || year > config.endYear) currentError = `Outside Era!`;
-    else if (config.startsWith && !firstName.startsWith(config.startsWith)) currentError = `Name must start with ${config.startsWith}`;
-    else if (config.conf && !TEAMS[config.conf].includes(s.TEAM_ABBREVIATION)) currentError = `Wrong Conference!`;
-    else if (config.div && !TEAMS[config.div].includes(s.TEAM_ABBREVIATION)) currentError = `Wrong Division!`;
-    else if (config.maxAge && s.AGE > config.maxAge) currentError = `Too old!`;
-    else if (config.maxGP && s.GP > config.maxGP) currentError = `Too many games!`;
-    else if (config.minWins && s.W < config.minWins) currentError = `Not enough team wins!`;
+    // Add these new checks inside your existing handleLock if-else chain:
+    
+    if (config.max3PA && (s.FG3A ?? 0) > config.max3PA) {
+      currentError = `Too many attempts! (${s.FG3A})`;
+    }
+    else if (config.minFT && (s.FT_PCT ?? 0) < config.minFT) {
+      currentError = `Low FT%! (${((s.FT_PCT ?? 0) * 100).toFixed(1)}%)`;
+    }
+    else if (config.maxPlusMinus && (s.PLUS_MINUS ?? 0) > config.maxPlusMinus) {
+      currentError = `+/- is too high!`;
+    }
+    else if (config.minDD2 && (s.DD2 ?? 0) < config.minDD2) {
+      currentError = `Need more Double-Doubles!`;
+    }
+    else if (config.maxPPGRank && (s.PTS_RANK ?? 999) < config.maxPPGRank) {
+      currentError = `Too high in scoring rank!`;
+    }
+    else if (config.maxPMRank && (s.PLUS_MINUS_RANK ?? 999) > config.maxPMRank) {
+      currentError = `Not high enough in +/- rank!`;
+    }
 
     if (currentError) {
       setError(currentError);
@@ -226,3 +226,4 @@ export default function App() {
     </div>
   );
 }
+
