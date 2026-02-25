@@ -31,14 +31,12 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
   const [error, setError] = useState("");
   const [showResults, setShowResults] = useState(false);
 
-  // Group data by unique player names for the first search
   const playerList = useMemo(() => {
     if (query.length < 3 || isLocked || !nbaData) return [];
     const uniquePlayers = Array.from(new Set(nbaData.map(s => s.PLAYER_NAME)));
     return uniquePlayers.filter(p => p.toLowerCase().includes(query.toLowerCase())).slice(0, 10);
   }, [query, isLocked, nbaData]);
 
-  // Find all seasons for the specific player selected
   const playerSeasons = useMemo(() => {
     if (!tempPlayer || !nbaData) return [];
     return nbaData.filter(s => s.PLAYER_NAME === tempPlayer).sort((a, b) => b.SEASON.localeCompare(a.SEASON));
@@ -81,7 +79,7 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
       onWrongGuess();
       return;
     }
-    onScoreUpdate(seasonData[targetStat] || 0);
+    onScoreUpdate(parseInt(seasonData[targetStat] || 0, 10));
     setIsLocked(seasonData);
   };
 
@@ -94,7 +92,7 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
           {!tempPlayer ? (
             <>
               <input 
-                placeholder="Search Player Name..." 
+                placeholder="Search Player..." 
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setShowResults(true); setError(""); }}
                 style={{ width: "100%", padding: "10px", boxSizing: "border-box", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }}
@@ -109,7 +107,7 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
             </>
           ) : (
             <div>
-              <p style={{ fontSize: "0.9rem", color: "#4caf50" }}>Selected: {tempPlayer} <span style={{ float: "right", color: "#888", cursor: "pointer" }} onClick={() => setTempPlayer(null)}>Cancel</span></p>
+              <p style={{ fontSize: "0.9rem", color: "#4caf50" }}>{tempPlayer} <span style={{ float: "right", color: "#888", cursor: "pointer", fontSize: "0.7rem" }} onClick={() => setTempPlayer(null)}>CHANGE</span></p>
               <select 
                 style={{ width: "100%", padding: "10px", borderRadius: "5px", background: "#333", color: "white", border: "none" }}
                 onChange={(e) => handleSelection(playerSeasons[e.target.value])}
@@ -117,7 +115,7 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
               >
                 <option value="" disabled>Select Season</option>
                 {playerSeasons.map((s, idx) => (
-                  <option key={idx} value={idx}>{s.SEASON} - {s.TEAM_ABBREVIATION} ({s[targetStat]} {targetStat})</option>
+                  <option key={idx} value={idx}>{s.SEASON} - {s.TEAM_ABBREVIATION}</option>
                 ))}
               </select>
             </div>
@@ -169,7 +167,7 @@ export default function App() {
           (config.maxPMRank ? (s.PLUS_MINUS_RANK || 999) <= config.maxPMRank : true)
         );
       }).sort((a, b) => (b[challenge.stat] || 0) - (a[challenge.stat] || 0))[0];
-      return acc + (best ? best[challenge.stat] : 0);
+      return acc + (best ? parseInt(best[challenge.stat] || 0, 10) : 0);
     }, 0);
   }, [nbaData, challenge]);
 
@@ -216,9 +214,15 @@ export default function App() {
               navigator.clipboard.writeText(`Balledgemaxxing 🏀\n${totalScore} ${STAT_LABELS[challenge.stat]} | ${efficiency}% Efficiency`);
               alert("Stats copied!");
             }}
-            style={{ padding: "10px 20px", background: "#4caf50", color: "white", border: "none", borderRadius: "20px", fontWeight: "bold", cursor: "pointer" }}
+            style={{ padding: "10px 20px", background: "#4caf50", color: "white", border: "none", borderRadius: "20px", fontWeight: "bold", cursor: "pointer", marginRight: "10px" }}
           >
-            SHARE BOX SCORE
+            SHARE
+          </button>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ padding: "10px 20px", background: "#444", color: "white", border: "none", borderRadius: "20px", fontWeight: "bold", cursor: "pointer" }}
+          >
+            RESTART
           </button>
         </div>
       )}
