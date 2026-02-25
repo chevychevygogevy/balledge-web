@@ -15,12 +15,12 @@ const CHALLENGES = [
     date: "2026-02-26",
     stat: "FG3M",
     prompts: [
-      { text: "1997-05 | Under 250 3PA", max3PA: 250, startYear: 1997, endYear: 2005 },
-      { text: "2010-26 | Pacific | FT% > 90%", div: "Pacific", minFT: 0.90, startYear: 2010, endYear: 2026 },
-      { text: "1997-10 | East | Negative +/-", conf: "East", maxPlusMinus: -0.1, startYear: 1997, endYear: 2010 },
-      { text: "2000-15 | 15+ Double-Doubles", minDD2: 15, startYear: 2000, endYear: 2015 },
-      { text: "2015-26 | West | Not Top 50 PPG Rank", conf: "West", minPPGRank: 51, startYear: 2015, endYear: 2026 },
-      { text: "2020-26 | Atlantic | Top 20 +/- Rank", div: "Atlantic", maxPMRank: 20, startYear: 2020, endYear: 2026 }
+      { text: "2010-2020 | Under 250 3PA", max3PA: 250, startYear: 2010, endYear: 2020 },
+      { text: "2010-2026 | Pacific | FT% > 90%", div: "Pacific", minFT: 0.90, startYear: 2010, endYear: 2026 },
+      { text: "2015-2026 | East | Negative +/-", conf: "East", maxPlusMinus: -0.1, startYear: 2015, endYear: 2026 },
+      { text: "2000-2015 | 15+ Double-Doubles", minDD2: 15, startYear: 2000, endYear: 2015 },
+      { text: "2015-2026 | West | Outside Top 50 in PPG that season", conf: "West", minPPGRank: 51, startYear: 2015, endYear: 2026 },
+      { text: "2020-2026 | Atlantic | Top 20 in +/- that season", div: "Atlantic", maxPMRank: 20, startYear: 2020, endYear: 2026 }
     ]
   }
 ];
@@ -122,7 +122,7 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
           )}
           {error && <p style={{ color: "#ff4444", fontSize: "0.7rem", marginTop: "5px" }}>{error}</p>}
         </div>
-      ) : (
+  ) : (
         <div style={{ textAlign: "left" }}>
           <p style={{ margin: 0 }}><b>{isLocked.PLAYER_NAME}</b> ({isLocked.SEASON}) <span style={{ float: "right", color: "#4caf50" }}>+{isLocked[targetStat]}</span></p>
           <div style={{ fontSize: "0.6rem", color: "#555", marginTop: "5px" }}>
@@ -226,6 +226,3 @@ export default function App() {
           </button>
         </div>
       )}
-    </div>
-  );
-}
