@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import "./styles.css";
-import { Analytics } from "@vercel/analytics/react";
+
+// CLEAN START: No Analytics, No JSON import. Just the core game logic.
 
 const TEAMS = {
   Atlantic: ["BOS", "PHI", "NYK", "BKN", "TOR", "NJN"],
@@ -42,14 +43,13 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
   };
 
   const topAnswers = useMemo(() => {
-    if (!isLocked || !nbaData) return [];
+    if (!isLocked || !nbaData || nbaData.length === 0) return [];
     return nbaData.filter((s) => {
       const year = parseInt(s.SEASON?.split("-")[0] || "0");
       const firstName = s.PLAYER_NAME?.split(" ")[0] || "";
       return (
         year >= config.startYear && year <= config.endYear &&
         (config.startsWith ? firstName.startsWith(config.startsWith) : true) &&
-        (config.conf ? TEAMS[config.conf]?.includes(s.TEAM_ABBREVIATION) : true) &&
         (config.max3PA ? (s.FG3A || 0) <= config.max3PA : true) &&
         (config.minFT ? (s.FT_PCT || 0) >= config.minFT : true) &&
         (config.maxPlusMinus ? (s.PLUS_MINUS || 0) <= config.maxPlusMinus : true) &&
@@ -138,15 +138,20 @@ export default function App() {
   const [wrongGuesses, setWrongGuesses] = useState(0);
   const [slotsLocked, setSlotsLocked] = useState([null, null, null, null, null, null]);
 
-  // FETCH DATA ON LOAD
   useEffect(() => {
     fetch("/balledge_full_dataset.json")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("File not found");
+        return res.json();
+      })
       .then((data) => {
         setNbaData(data);
         setLoading(false);
       })
-      .catch((err) => console.error("Data load failed", err));
+      .catch((err) => {
+        console.error("Data load failed", err);
+        setLoading(false);
+      });
   }, []);
 
   const currentChallenge = useMemo(() => {
@@ -158,7 +163,7 @@ export default function App() {
   const dailyPrompts = currentChallenge.prompts;
 
   const maxPossibleScore = useMemo(() => {
-    if (nbaData.length === 0) return 0;
+    if (!nbaData || nbaData.length === 0) return 0;
     return dailyPrompts.reduce((acc, config) => {
       const best = nbaData.filter((s) => {
         const year = parseInt(s.SEASON?.split("-")[0] || "0");
@@ -195,7 +200,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: "#121212", color: "white", minHeight: "100vh", padding: "20px", fontFamily: "sans-serif", textAlign: "center" }}>
       <h1>BALLEDGEMAXXING</h1>
-      <div style={{ position: "sticky", top: 0, backgroundColor: "#121212", padding: "10px", zIndex: 100 }}>
+      <div style={{ position: "sticky", top: 0, backgroundColor: "#121212", padding: "10px", zIndex: 100, borderBottom: "1px solid #333" }}>
         <h2 style={{ color: "#4caf50", fontSize: "2.5rem", margin: 0 }}>{totalScore.toFixed(1)}</h2>
         <span style={{ fontSize: "0.6rem", color: "#888" }}>WRONG GUESSES: {wrongGuesses}</span>
       </div>
@@ -212,9 +217,13 @@ export default function App() {
       {lockedCount === 6 && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, backgroundColor: "#1e1e1e", padding: "25px", borderTop: "3px solid #4caf50" }}>
           <h3>FINAL EFFICIENCY: {efficiency}%</h3>
+          <button onClick={() => {
+             const text = `Balledgemaxxing 🏀\nTotal: ${totalScore.toFixed(1)}\nEfficiency: ${efficiency}%\nGuessed wrong ${wrongGuesses} times.`;
+             navigator.clipboard.writeText(text);
+             alert("Stats copied!");
+          }} style={{ padding: "12px 25px", backgroundColor: "#4caf50", color: "white", border: "none", borderRadius: "25px", fontWeight: "bold", cursor: "pointer" }}>SHARE RESULTS 📋</button>
         </div>
       )}
-      <Analytics />
     </div>
   );
 }
