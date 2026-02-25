@@ -63,7 +63,6 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
   const handleSelection = (seasonData) => {
     const year = parseInt(seasonData.SEASON?.split("-")[0] || "0");
     let currentError = "";
-
     if (year < config.startYear || year > config.endYear) currentError = "Wrong Era!";
     else if (config.div && !TEAMS[config.div]?.includes(seasonData.TEAM_ABBREVIATION)) currentError = "Wrong Division!";
     else if (config.conf && !TEAMS[config.conf]?.includes(seasonData.TEAM_ABBREVIATION)) currentError = "Wrong Conference!";
@@ -86,17 +85,11 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
   return (
     <div style={{ border: isLocked ? "2px solid #4caf50" : "1px solid #333", margin: "10px auto", padding: "15px", maxWidth: "400px", borderRadius: "10px", backgroundColor: "#1b1b1b" }}>
       <p style={{ fontSize: "0.7rem", color: "#888", textAlign: "left", margin: "0 0 10px 0" }}>SLOT {slotNumber} • {config.text}</p>
-      
       {!isLocked ? (
         <div style={{ position: "relative" }}>
           {!tempPlayer ? (
             <>
-              <input 
-                placeholder="Search Player..." 
-                value={query}
-                onChange={(e) => { setQuery(e.target.value); setShowResults(true); setError(""); }}
-                style={{ width: "100%", padding: "10px", boxSizing: "border-box", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }}
-              />
+              <input placeholder="Search Player..." value={query} onChange={(e) => { setQuery(e.target.value); setShowResults(true); setError(""); }} style={{ width: "100%", padding: "10px", boxSizing: "border-box", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }} />
               {showResults && playerList.length > 0 && (
                 <div style={{ position: "absolute", top: "42px", left: 0, right: 0, background: "#222", border: "1px solid #444", zIndex: 10, maxHeight: "150px", overflowY: "auto" }}>
                   {playerList.map((p, i) => (
@@ -108,33 +101,13 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
           ) : (
             <div>
               <p style={{ fontSize: "0.9rem", color: "#4caf50" }}>{tempPlayer} <span style={{ float: "right", color: "#888", cursor: "pointer", fontSize: "0.7rem" }} onClick={() => setTempPlayer(null)}>CHANGE</span></p>
-              <select 
-                style={{ width: "100%", padding: "10px", borderRadius: "5px", background: "#333", color: "white", border: "none" }}
-                onChange={(e) => handleSelection(playerSeasons[e.target.value])}
-                defaultValue=""
-              >
+              <select style={{ width: "100%", padding: "10px", borderRadius: "5px", background: "#333", color: "white", border: "none" }} onChange={(e) => handleSelection(playerSeasons[e.target.value])} defaultValue="" >
                 <option value="" disabled>Select Season</option>
-                {playerSeasons.map((s, idx) => (
-                  <option key={idx} value={idx}>{s.SEASON} - {s.TEAM_ABBREVIATION}</option>
-                ))}
+                {playerSeasons.map((s, idx) => (<option key={idx} value={idx}>{s.SEASON} - {s.TEAM_ABBREVIATION}</option>))}
               </select>
             </div>
           )}
           {error && <p style={{ color: "#ff4444", fontSize: "0.7rem", marginTop: "5px" }}>{error}</p>}
         </div>
       ) : (
-        <div style={{ textAlign: "left" }}>
-          <p style={{ margin: 0 }}><b>{isLocked.PLAYER_NAME}</b> ({isLocked.SEASON}) <span style={{ float: "right", color: "#4caf50" }}>+{isLocked[targetStat]}</span></p>
-          <div style={{ fontSize: "0.6rem", color: "#555", marginTop: "5px" }}>
-            BEST: {bestMoves.map(m => `${m.PLAYER_NAME} '${m.SEASON.slice(-2)} (${m[targetStat]})`).join(" | ")}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default function App() {
-  const [nbaData, setNbaData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const
+        <div style={{ textAlign:
