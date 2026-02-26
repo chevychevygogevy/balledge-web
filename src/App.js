@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 
-// MOVED STYLES INTO THE CODE TO PREVENT BUILD CRASHES
 const styles = {
   container: { backgroundColor: "#121212", color: "white", minHeight: "100vh", padding: "15px", textAlign: "center", fontFamily: "sans-serif" },
   header: { letterSpacing: "2px", margin: "0 0 5px 0" },
@@ -10,25 +9,29 @@ const styles = {
 };
 
 const TEAMS = {
-  Atlantic: ["BOS", "PHI", "NYK", "BKN", "TOR", "NJN"],
-  Pacific: ["GSW", "LAL", "LAC", "PHX", "SAC"],
-  East: ["BOS", "PHI", "NYK", "BKN", "TOR", "NJN", "CHI", "CLE", "DET", "IND", "MIL", "ATL", "CHA", "MIA", "ORL", "WAS", "CHH", "SYR", "PHW"],
-  West: ["GSW", "LAL", "LAC", "PHX", "SAC", "DEN", "MIN", "OKC", "POR", "UTA", "DAL", "HOU", "MEM", "NOP", "SAS", "SEA", "NOK", "KCK", "SDC", "SFW", "STL"],
+  "NFC East": ["NYG", "PHI", "DAL", "WAS"],
+  "NFC North": ["CHI", "DET", "GB", "MIN"],
+  "NFC South": ["ATL", "CAR", "NO", "TB"],
+  "NFC West": ["ARI", "LA", "SF", "SEA"],
+  "AFC East": ["BUF", "MIA", "NE", "NYJ"],
+  "AFC North": ["BAL", "CIN", "CLE", "PIT"],
+  "AFC South": ["HOU", "IND", "JAX", "TEN"],
+  "AFC West": ["DEN", "KC", "LV", "LAC"],
 };
 
-const STAT_LABELS = { ppg: "PPG", rpg: "RPG", apg: "APG", FG3M: "3PM", STL: "STL", BLK: "BLK" };
+const STAT_LABELS = { PASS_YD: "Passing Yds", PASS_TD: "Pass TDs", RUSH_YD: "Rush Yds", INT: "INTs" };
 
 const CHALLENGES = [
   {
     date: "2026-02-26",
-    stat: "FG3M",
+    stat: "PASS_YD", 
     prompts: [
-      { text: "2010-2020 | Under 250 3PA", max3PA: 250, startYear: 2010, endYear: 2020 },
-      { text: "2010-2026 | Pacific | FT% > 90%", div: "Pacific", minFT: 0.90, startYear: 2010, endYear: 2026 },
-      { text: "2015-2026 | East | Negative +/-", conf: "East", maxPlusMinus: -0.1, startYear: 2015, endYear: 2026 },
-      { text: "2000-2015 | 15+ Double-Doubles", minDD2: 15, startYear: 2000, endYear: 2015 },
-      { text: "2015-2026 | West | Outside Top 50 in PPG that season", conf: "West", minPPGRank: 51, startYear: 2015, endYear: 2026 },
-      { text: "2020-2026 | Atlantic | Top 20 in +/- that season", div: "Atlantic", maxPMRank: 20, startYear: 2020, endYear: 2026 }
+      { text: "1999-2026 | Under 15 Passing TDs", maxTD: 14, startYear: 1999, endYear: 2026 },
+      { text: "1999-2026 | 15+ Interceptions", minInt: 15, startYear: 1999, endYear: 2026 },
+      { text: "1999-2026 | 300+ Rushing Yards", minRush: 300, startYear: 1999, endYear: 2026 },
+      { text: "1999-2026 | 1+ Receptions on the year", minRec: 1, startYear: 1999, endYear: 2026 },
+      { text: "1999-2026 | Under 8 Games Played", maxGP: 7, startYear: 1999, endYear: 2026 },
+      { text: "1999-2026 | Under 3,000 Passing Yards", maxPass: 2999, startYear: 1999, endYear: 2026 }
     ]
   }
 ];
@@ -47,40 +50,20 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
 
   const playerSeasons = useMemo(() => {
     if (!tempPlayer || !nbaData) return [];
-    return nbaData.filter(s => s.PLAYER_NAME === tempPlayer).sort((a, b) => b.SEASON.localeCompare(a.SEASON));
+    return nbaData.filter(s => s.PLAYER_NAME === tempPlayer).sort((a, b) => b.SEASON - a.SEASON);
   }, [tempPlayer, nbaData]);
 
-  const bestMoves = useMemo(() => {
-    if (!isLocked || !nbaData) return [];
-    return nbaData.filter(s => {
-      const year = parseInt(s.SEASON?.split("-")[0] || "0");
-      return (
-        year >= config.startYear && year <= config.endYear &&
-        (config.div ? TEAMS[config.div]?.includes(s.TEAM_ABBREVIATION) : true) &&
-        (config.conf ? TEAMS[config.conf]?.includes(s.TEAM_ABBREVIATION) : true) &&
-        (config.max3PA ? (s.FG3A || 0) <= config.max3PA : true) &&
-        (config.minFT ? (s.FT_PCT || 0) >= config.minFT : true) &&
-        (config.maxPlusMinus ? (s.PLUS_MINUS || 0) <= config.maxPlusMinus : true) &&
-        (config.minDD2 ? (s.DD2 || 0) >= config.minDD2 : true) &&
-        (config.minPPGRank ? (s.PTS_RANK || 999) >= config.minPPGRank : true) &&
-        (config.maxPMRank ? (s.PLUS_MINUS_RANK || 999) <= config.maxPMRank : true)
-      );
-    }).sort((a, b) => (b[targetStat] || 0) - (a[targetStat] || 0)).slice(0, 3);
-  }, [isLocked, nbaData, config, targetStat]);
-
   const handleSelection = (seasonData) => {
-    const year = parseInt(seasonData.SEASON?.split("-")[0] || "0");
+    const year = parseInt(seasonData.SEASON || "0");
     let currentError = "";
 
     if (year < config.startYear || year > config.endYear) currentError = "Wrong Era!";
-    else if (config.div && !TEAMS[config.div]?.includes(seasonData.TEAM_ABBREVIATION)) currentError = "Wrong Division!";
-    else if (config.conf && !TEAMS[config.conf]?.includes(seasonData.TEAM_ABBREVIATION)) currentError = "Wrong Conference!";
-    else if (config.max3PA && (seasonData.FG3A || 0) > config.max3PA) currentError = "Too many 3PA!";
-    else if (config.minFT && (seasonData.FT_PCT || 0) < config.minFT) currentError = "FT% too low!";
-    else if (config.maxPlusMinus && (seasonData.PLUS_MINUS || 0) > config.maxPlusMinus) currentError = "+/- too high!";
-    else if (config.minDD2 && (seasonData.DD2 || 0) < config.minDD2) currentError = "Need more DD!";
-    else if (config.minPPGRank && (seasonData.PTS_RANK || 999) < config.minPPGRank) currentError = "Scoring rank too high!";
-    else if (config.maxPMRank && (seasonData.PLUS_MINUS_RANK || 999) > config.maxPMRank) currentError = "+/- rank too low!";
+    else if (config.maxTD !== undefined && seasonData.PASS_TD > config.maxTD) currentError = "Too many Passing TDs!";
+    else if (config.minInt !== undefined && seasonData.INT < config.minInt) currentError = "Need more Interceptions!";
+    else if (config.minRush !== undefined && seasonData.RUSH_YD < config.minRush) currentError = "Not enough Rushing Yards!";
+    else if (config.minRec !== undefined && seasonData.REC < config.minRec) currentError = "Need at least 1 Catch!";
+    else if (config.maxGP !== undefined && seasonData.GP > config.maxGP) currentError = "Too many Games Played!";
+    else if (config.maxPass !== undefined && seasonData.PASS_YD > config.maxPass) currentError = "Too many Passing Yards!";
 
     if (currentError) {
       setError(currentError);
@@ -98,133 +81,8 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
         <div style={{ position: "relative" }}>
           {!tempPlayer ? (
             <>
-              <input placeholder="Search Player..." value={query} onChange={(e) => { setQuery(e.target.value); setShowResults(true); setError(""); }} style={{ width: "100%", padding: "10px", boxSizing: "border-box", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }} />
+              <input placeholder="Search NFL Player..." value={query} onChange={(e) => { setQuery(e.target.value); setShowResults(true); setError(""); }} style={{ width: "100%", padding: "10px", boxSizing: "border-box", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }} />
               {showResults && playerList.length > 0 && (
                 <div style={{ position: "absolute", top: "42px", left: 0, right: 0, background: "#222", border: "1px solid #444", zIndex: 10, maxHeight: "150px", overflowY: "auto" }}>
                   {playerList.map((p, i) => (
-                    <div key={i} style={{ padding: "10px", borderBottom: "1px solid #333", cursor: "pointer" }} onClick={() => { setTempPlayer(p); setShowResults(false); }}>{p}</div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div>
-              <p style={{ fontSize: "0.9rem", color: "#4caf50" }}>{tempPlayer} <span style={{ float: "right", color: "#888", cursor: "pointer", fontSize: "0.7rem" }} onClick={() => setTempPlayer(null)}>CHANGE</span></p>
-              <select style={{ width: "100%", padding: "10px", borderRadius: "5px", background: "#333", color: "white", border: "none" }} onChange={(e) => handleSelection(playerSeasons[e.target.value])} defaultValue="" >
-                <option value="" disabled>Select Season</option>
-                {playerSeasons.map((s, idx) => (
-                  <option key={idx} value={idx}>{s.SEASON} - {s.TEAM_ABBREVIATION}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          {error && <p style={{ color: "#ff4444", fontSize: "0.7rem", marginTop: "5px" }}>{error}</p>}
-        </div>
-      ) : (
-        <div style={{ textAlign: "left" }}>
-          <p style={{ margin: 0 }}><b>{isLocked.PLAYER_NAME}</b> ({isLocked.SEASON}) <span style={{ float: "right", color: "#4caf50" }}>+{isLocked[targetStat]}</span></p>
-          <div style={{ fontSize: "0.6rem", color: "#555", marginTop: "5px" }}>
-            BEST: {bestMoves.map(m => `${m.PLAYER_NAME} '${m.SEASON.slice(-2)} (${m[targetStat]})`).join(" | ")}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default function App() {
-  const [nbaData, setNbaData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalScore, setTotalScore] = useState(0);
-  const [wrongGuesses, setWrongGuesses] = useState(0);
-  const [slotsLocked, setSlotsLocked] = useState([null, null, null, null, null, null]);
-
-  useEffect(() => {
-    fetch("/balledge_full_dataset.json")
-      .then(res => res.json())
-      .then(data => { setNbaData(data); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); });
-  }, []);
-
-  const challenge = CHALLENGES[0];
-  const lockedCount = slotsLocked.filter(s => s !== null).length;
-
-  const maxPossibleScore = useMemo(() => {
-    if (!nbaData.length) return 0;
-    return challenge.prompts.reduce((acc, config) => {
-      const best = nbaData.filter(s => {
-        const year = parseInt(s.SEASON?.split("-")[0] || "0");
-        return (
-          year >= config.startYear && year <= config.endYear &&
-          (config.div ? TEAMS[config.div]?.includes(s.TEAM_ABBREVIATION) : true) &&
-          (config.conf ? TEAMS[config.conf]?.includes(s.TEAM_ABBREVIATION) : true) &&
-          (config.max3PA ? (s.FG3A || 0) <= config.max3PA : true) &&
-          (config.minFT ? (s.FT_PCT || 0) >= config.minFT : true) &&
-          (config.maxPlusMinus ? (s.PLUS_MINUS || 0) <= config.maxPlusMinus : true) &&
-          (config.minDD2 ? (s.DD2 || 0) >= config.minDD2 : true) &&
-          (config.minPPGRank ? (s.PTS_RANK || 999) >= config.minPPGRank : true) &&
-          (config.maxPMRank ? (s.PLUS_MINUS_RANK || 999) <= config.maxPMRank : true)
-        );
-      }).sort((a, b) => (b[challenge.stat] || 0) - (a[challenge.stat] || 0))[0];
-      return acc + (best ? parseInt(best[challenge.stat] || 0, 10) : 0);
-    }, 0);
-  }, [nbaData, challenge]);
-
-  const efficiency = maxPossibleScore > 0 ? ((totalScore / maxPossibleScore) * 100 - (wrongGuesses * 2)).toFixed(1) : 0;
-
-  if (loading) return <div style={{ color: "white", textAlign: "center", padding: "50px" }}>Scouting...</div>;
-
-  return (
-    <div style={styles.container}>
-      <h2 style={styles.header}>BALLEDGEMAXXING</h2>
-      <div style={styles.badge}>
-        <span style={{ fontSize: "0.6rem", color: "#4caf50", fontWeight: "bold" }}>GOAL: MAXIMIZE {STAT_LABELS[challenge.stat]}</span>
-      </div>
-
-      <div style={styles.scoreBox}>
-        <h1 style={{ color: "#4caf50", margin: 0, fontSize: "3.5rem" }}>{totalScore}</h1>
-        <p style={{ fontSize: "0.6rem", color: "#888" }}>MISSES: {wrongGuesses}</p>
-      </div>
-
-      {challenge.prompts.map((config, i) => (
-        <StatSlot 
-          key={i} 
-          slotNumber={i + 1} 
-          config={config} 
-          targetStat={challenge.stat} 
-          nbaData={nbaData} 
-          isLocked={slotsLocked[i]} 
-          setIsLocked={(s) => {
-            const n = [...slotsLocked];
-            n[i] = s;
-            setSlotsLocked(n);
-          }}
-          onScoreUpdate={(v) => setTotalScore(prev => prev + v)}
-          onWrongGuess={() => setWrongGuesses(prev => prev + 1)}
-        />
-      ))}
-
-      {lockedCount === 6 && (
-        <div style={{ marginTop: "30px", padding: "20px", background: "#1b1b1b", borderRadius: "15px", border: "2px solid #4caf50" }}>
-          <h3>FINAL SCORE: {totalScore}</h3>
-          <p>Efficiency: {efficiency}%</p>
-          <button 
-            onClick={() => {
-              navigator.clipboard.writeText(`Balledgemaxxing 🏀\n${totalScore} ${STAT_LABELS[challenge.stat]} | ${efficiency}% Efficiency`);
-              alert("Stats copied!");
-            }}
-            style={{ padding: "10px 20px", background: "#4caf50", color: "white", border: "none", borderRadius: "20px", fontWeight: "bold", cursor: "pointer", marginRight: "10px" }}
-          >
-            SHARE
-          </button>
-          <button 
-            onClick={() => window.location.reload()}
-            style={{ padding: "10px 20px", background: "#444", color: "white", border: "none", borderRadius: "20px", fontWeight: "bold", cursor: "pointer" }}
-          >
-            RESTART
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+                    <div key={i} style={{ padding: "10px",
