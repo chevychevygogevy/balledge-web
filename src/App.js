@@ -5,36 +5,35 @@ const styles = {
   header: { letterSpacing: "2px", margin: "0 0 5px 0" },
   badge: { backgroundColor: "#333", display: "inline-block", padding: "4px 12px", borderRadius: "10px", marginBottom: "15px" },
   scoreBox: { position: "sticky", top: 0, background: "#121212", padding: "10px", zIndex: 10, borderBottom: "1px solid #333" },
-  slot: { border: "1px solid #333", margin: "10px auto", padding: "15px", maxWidth: "400px", borderRadius: "10px", backgroundColor: "#1b1b1b" }
+  slot: { border: "1px solid #333", margin: "10px auto", padding: "15px", maxWidth: "400px", borderRadius: "10px", backgroundColor: "#1b1b1b" },
+  dropdown: { 
+    position: "absolute", top: "45px", left: 0, right: 0, 
+    background: "#222", border: "1px solid #444", zIndex: 1000, // High z-index is key
+    maxHeight: "200px", overflowY: "auto", borderRadius: "5px", textAlign: "left" 
+  },
+  resultItem: { padding: "10px", borderBottom: "1px solid #333", cursor: "pointer", color: "white" }
 };
 
 const TEAMS = {
-  "NFC East": ["NYG", "PHI", "DAL", "WAS"],
-  "NFC North": ["CHI", "DET", "GB", "MIN"],
-  "NFC South": ["ATL", "CAR", "NO", "TB"],
-  "NFC West": ["ARI", "LA", "SF", "SEA"],
-  "AFC East": ["BUF", "MIA", "NE", "NYJ"],
-  "AFC North": ["BAL", "CIN", "CLE", "PIT"],
-  "AFC South": ["HOU", "IND", "JAX", "TEN"],
-  "AFC West": ["DEN", "KC", "LV", "LAC"],
+  "NFC East": ["NYG", "PHI", "DAL", "WAS"], "NFC North": ["CHI", "DET", "GB", "MIN"],
+  "NFC South": ["ATL", "CAR", "NO", "TB"], "NFC West": ["ARI", "LA", "SF", "SEA"],
+  "AFC East": ["BUF", "MIA", "NE", "NYJ"], "AFC North": ["BAL", "CIN", "CLE", "PIT"],
+  "AFC South": ["HOU", "IND", "JAX", "TEN"], "AFC West": ["DEN", "KC", "LV", "LAC"],
 };
 
 const STAT_LABELS = { PASS_YD: "Passing Yds", PASS_TD: "Pass TDs", RUSH_YD: "Rush Yds", INT: "INTs" };
 
-const CHALLENGES = [
-  {
-    date: "2026-02-26",
-    stat: "PASS_YD", 
-    prompts: [
-      { text: "1999-2026 | Under 15 Passing TDs", maxTD: 14, startYear: 1999, endYear: 2026 },
-      { text: "1999-2026 | 15+ Interceptions", minInt: 15, startYear: 1999, endYear: 2026 },
-      { text: "1999-2026 | 300+ Rushing Yards", minRush: 300, startYear: 1999, endYear: 2026 },
-      { text: "1999-2026 | 1+ Receptions on the year", minRec: 1, startYear: 1999, endYear: 2026 },
-      { text: "1999-2026 | Under 8 Games Played", maxGP: 7, startYear: 1999, endYear: 2026 },
-      { text: "1999-2026 | Under 3,000 Passing Yards", maxPass: 2999, startYear: 1999, endYear: 2026 }
-    ]
-  }
-];
+const CHALLENGES = [{
+  date: "2026-02-26", stat: "PASS_YD", 
+  prompts: [
+    { text: "1999-2026 | Under 15 Passing TDs", maxTD: 14, startYear: 1999, endYear: 2026 },
+    { text: "1999-2026 | 15+ Interceptions", minInt: 15, startYear: 1999, endYear: 2026 },
+    { text: "1999-2026 | 300+ Rushing Yards", minRush: 300, startYear: 1999, endYear: 2026 },
+    { text: "1999-2026 | 1+ Receptions on the year", minRec: 1, startYear: 1999, endYear: 2026 },
+    { text: "1999-2026 | Under 8 Games Played", maxGP: 7, startYear: 1999, endYear: 2026 },
+    { text: "1999-2026 | Under 3,000 Passing Yards", maxPass: 2999, startYear: 1999, endYear: 2026 }
+  ]
+}];
 
 const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, targetStat, onWrongGuess, nflData }) => {
   const [query, setQuery] = useState("");
@@ -56,7 +55,6 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
   const handleSelection = (seasonData) => {
     const year = parseInt(seasonData.SEASON || "0");
     let currentError = "";
-
     if (year < config.startYear || year > config.endYear) currentError = "Wrong Era!";
     else if (config.maxTD !== undefined && seasonData.PASS_TD > config.maxTD) currentError = "Too many Passing TDs!";
     else if (config.minInt !== undefined && seasonData.INT < config.minInt) currentError = "Need more Interceptions!";
@@ -65,11 +63,7 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
     else if (config.maxGP !== undefined && seasonData.GP > config.maxGP) currentError = "Too many Games Played!";
     else if (config.maxPass !== undefined && seasonData.PASS_YD > config.maxPass) currentError = "Too many Passing Yards!";
 
-    if (currentError) {
-      setError(currentError);
-      onWrongGuess();
-      return;
-    }
+    if (currentError) { setError(currentError); onWrongGuess(); return; }
     onScoreUpdate(parseInt(seasonData[targetStat] || 0, 10));
     setIsLocked(seasonData);
   };
@@ -81,11 +75,16 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
         <div style={{ position: "relative" }}>
           {!tempPlayer ? (
             <>
-              <input placeholder="Search NFL Player..." value={query} onChange={(e) => { setQuery(e.target.value); setShowResults(true); setError(""); }} style={{ width: "100%", padding: "10px", boxSizing: "border-box", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }} />
+              <input 
+                placeholder="Type 3 letters (e.g. Brady)..." 
+                value={query} 
+                onChange={(e) => { setQuery(e.target.value); setShowResults(true); setError(""); }} 
+                style={{ width: "100%", padding: "12px", boxSizing: "border-box", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }} 
+              />
               {showResults && playerList.length > 0 && (
-                <div style={{ position: "absolute", top: "42px", left: 0, right: 0, background: "#222", border: "1px solid #444", zIndex: 10, maxHeight: "150px", overflowY: "auto" }}>
+                <div style={styles.dropdown}>
                   {playerList.map((p, i) => (
-                    <div key={i} style={{ padding: "10px", borderBottom: "1px solid #333", cursor: "pointer" }} onClick={() => { setTempPlayer(p); setShowResults(false); }}>{p}</div>
+                    <div key={i} style={styles.resultItem} onClick={() => { setTempPlayer(p); setShowResults(false); }}>{p}</div>
                   ))}
                 </div>
               )}
@@ -120,60 +119,33 @@ export default function App() {
   const [slotsLocked, setSlotsLocked] = useState([null, null, null, null, null, null]);
 
   useEffect(() => {
-    // THIS LINE FETCHES YOUR JSON FILE
     fetch("/balledge_nfl_dataset.json")
-      .then(res => {
-        if (!res.ok) throw new Error("JSON file not found");
-        return res.json();
-      })
-      .then(data => {
-        setNflData(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Fetch error:", err);
-        setLoading(false);
-      });
+      .then(res => res.json())
+      .then(data => { setNflData(data); setLoading(false); })
+      .catch(err => { console.error("Data error:", err); setLoading(false); });
   }, []);
 
-  const challenge = CHALLENGES[0];
-  const lockedCount = slotsLocked.filter(s => s !== null).length;
-
-  if (loading) return <div style={{ color: "white", textAlign: "center", padding: "50px" }}>Loading NFL Dataset...</div>;
+  if (loading) return <div style={{ color: "white", textAlign: "center", padding: "50px" }}>Loading NFL Stats ({nflData.length} loaded)...</div>;
 
   return (
     <div style={styles.container}>
       <h2 style={styles.header}>BALLEDGEMAXXING NFL</h2>
       <div style={styles.badge}>
-        <span style={{ fontSize: "0.6rem", color: "#4caf50", fontWeight: "bold" }}>GOAL: MAXIMIZE {STAT_LABELS[challenge.stat]}</span>
+        <span style={{ fontSize: "0.6rem", color: "#4caf50", fontWeight: "bold" }}>GOAL: MAXIMIZE PASSING YARDS</span>
       </div>
       <div style={styles.scoreBox}>
         <h1 style={{ color: "#4caf50", margin: 0, fontSize: "3.5rem" }}>{totalScore}</h1>
-        <p style={{ fontSize: "0.6rem", color: "#888" }}>MISSES: {wrongGuesses}</p>
+        <p style={{ fontSize: "0.6rem", color: "#888" }}>MISSES: {wrongGuesses} | PLAYERS: {nflData.length}</p>
       </div>
-      {challenge.prompts.map((config, i) => (
+      {CHALLENGES[0].prompts.map((config, i) => (
         <StatSlot 
-          key={i} 
-          slotNumber={i + 1} 
-          config={config} 
-          targetStat={challenge.stat} 
-          nflData={nflData} 
+          key={i} slotNumber={i + 1} config={config} targetStat="PASS_YD" nflData={nflData} 
           isLocked={slotsLocked[i]} 
-          setIsLocked={(s) => {
-            const n = [...slotsLocked];
-            n[i] = s;
-            setSlotsLocked(n);
-          }}
+          setIsLocked={(s) => { const n = [...slotsLocked]; n[i] = s; setSlotsLocked(n); }}
           onScoreUpdate={(v) => setTotalScore(prev => prev + v)}
           onWrongGuess={() => setWrongGuesses(prev => prev + 1)}
         />
       ))}
-      {lockedCount === 6 && (
-        <div style={{ marginTop: "30px", padding: "20px", background: "#1b1b1b", borderRadius: "15px", border: "2px solid #4caf50" }}>
-          <h3>FINAL SCORE: {totalScore}</h3>
-          <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", background: "#444", color: "white", border: "none", borderRadius: "20px", fontWeight: "bold", cursor: "pointer" }} > RESTART </button>
-        </div>
-      )}
     </div>
   );
 }
