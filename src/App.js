@@ -36,22 +36,22 @@ const CHALLENGES = [
   }
 ];
 
-const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, targetStat, onWrongGuess, nbaData }) => {
+const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, targetStat, onWrongGuess, nflData }) => {
   const [query, setQuery] = useState("");
   const [tempPlayer, setTempPlayer] = useState(null);
   const [error, setError] = useState("");
   const [showResults, setShowResults] = useState(false);
 
   const playerList = useMemo(() => {
-    if (query.length < 3 || isLocked || !nbaData) return [];
-    const uniquePlayers = Array.from(new Set(nbaData.map(s => s.PLAYER_NAME)));
-    return uniquePlayers.filter(p => p.toLowerCase().includes(query.toLowerCase())).slice(0, 10);
-  }, [query, isLocked, nbaData]);
+    if (query.length < 3 || isLocked || !nflData) return [];
+    const uniquePlayers = Array.from(new Set(nflData.map(s => s.PLAYER_NAME)));
+    return uniquePlayers.filter(p => p && p.toLowerCase().includes(query.toLowerCase())).slice(0, 10);
+  }, [query, isLocked, nflData]);
 
   const playerSeasons = useMemo(() => {
-    if (!tempPlayer || !nbaData) return [];
-    return nbaData.filter(s => s.PLAYER_NAME === tempPlayer).sort((a, b) => b.SEASON - a.SEASON);
-  }, [tempPlayer, nbaData]);
+    if (!tempPlayer || !nflData) return [];
+    return nflData.filter(s => s.PLAYER_NAME === tempPlayer).sort((a, b) => b.SEASON - a.SEASON);
+  }, [tempPlayer, nflData]);
 
   const handleSelection = (seasonData) => {
     const year = parseInt(seasonData.SEASON || "0");
@@ -85,4 +85,95 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
               {showResults && playerList.length > 0 && (
                 <div style={{ position: "absolute", top: "42px", left: 0, right: 0, background: "#222", border: "1px solid #444", zIndex: 10, maxHeight: "150px", overflowY: "auto" }}>
                   {playerList.map((p, i) => (
-                    <div key={i} style={{ padding: "10px",
+                    <div key={i} style={{ padding: "10px", borderBottom: "1px solid #333", cursor: "pointer" }} onClick={() => { setTempPlayer(p); setShowResults(false); }}>{p}</div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div>
+              <p style={{ fontSize: "0.9rem", color: "#4caf50" }}>{tempPlayer} <span style={{ float: "right", color: "#888", cursor: "pointer", fontSize: "0.7rem" }} onClick={() => setTempPlayer(null)}>CHANGE</span></p>
+              <select style={{ width: "100%", padding: "10px", borderRadius: "5px", background: "#333", color: "white", border: "none" }} onChange={(e) => handleSelection(playerSeasons[e.target.value])} defaultValue="" >
+                <option value="" disabled>Select Season</option>
+                {playerSeasons.map((s, idx) => (
+                  <option key={idx} value={idx}>{s.SEASON} - {s.TEAM}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {error && <p style={{ color: "#ff4444", fontSize: "0.7rem", marginTop: "5px" }}>{error}</p>}
+        </div>
+      ) : (
+        <div style={{ textAlign: "left" }}>
+          <p style={{ margin: 0 }}><b>{isLocked.PLAYER_NAME}</b> ({isLocked.SEASON}) <span style={{ float: "right", color: "#4caf50" }}>+{isLocked[targetStat]}</span></p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function App() {
+  const [nflData, setNflData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalScore, setTotalScore] = useState(0);
+  const [wrongGuesses, setWrongGuesses] = useState(0);
+  const [slotsLocked, setSlotsLocked] = useState([null, null, null, null, null, null]);
+
+  useEffect(() => {
+    // THIS LINE FETCHES YOUR JSON FILE
+    fetch("/balledge_nfl_dataset.json")
+      .then(res => {
+        if (!res.ok) throw new Error("JSON file not found");
+        return res.json();
+      })
+      .then(data => {
+        setNflData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Fetch error:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const challenge = CHALLENGES[0];
+  const lockedCount = slotsLocked.filter(s => s !== null).length;
+
+  if (loading) return <div style={{ color: "white", textAlign: "center", padding: "50px" }}>Loading NFL Dataset...</div>;
+
+  return (
+    <div style={styles.container}>
+      <h2 style={styles.header}>BALLEDGEMAXXING NFL</h2>
+      <div style={styles.badge}>
+        <span style={{ fontSize: "0.6rem", color: "#4caf50", fontWeight: "bold" }}>GOAL: MAXIMIZE {STAT_LABELS[challenge.stat]}</span>
+      </div>
+      <div style={styles.scoreBox}>
+        <h1 style={{ color: "#4caf50", margin: 0, fontSize: "3.5rem" }}>{totalScore}</h1>
+        <p style={{ fontSize: "0.6rem", color: "#888" }}>MISSES: {wrongGuesses}</p>
+      </div>
+      {challenge.prompts.map((config, i) => (
+        <StatSlot 
+          key={i} 
+          slotNumber={i + 1} 
+          config={config} 
+          targetStat={challenge.stat} 
+          nflData={nflData} 
+          isLocked={slotsLocked[i]} 
+          setIsLocked={(s) => {
+            const n = [...slotsLocked];
+            n[i] = s;
+            setSlotsLocked(n);
+          }}
+          onScoreUpdate={(v) => setTotalScore(prev => prev + v)}
+          onWrongGuess={() => setWrongGuesses(prev => prev + 1)}
+        />
+      ))}
+      {lockedCount === 6 && (
+        <div style={{ marginTop: "30px", padding: "20px", background: "#1b1b1b", borderRadius: "15px", border: "2px solid #4caf50" }}>
+          <h3>FINAL SCORE: {totalScore}</h3>
+          <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", background: "#444", color: "white", border: "none", borderRadius: "20px", fontWeight: "bold", cursor: "pointer" }} > RESTART </button>
+        </div>
+      )}
+    </div>
+  );
+}
