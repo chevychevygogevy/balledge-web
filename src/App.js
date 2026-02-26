@@ -7,82 +7,78 @@ const styles = {
   scoreBox: { position: "sticky", top: 0, background: "#121212", padding: "10px", zIndex: 10, borderBottom: "1px solid #333" },
   slot: { border: "1px solid #333", margin: "10px auto", padding: "15px", maxWidth: "400px", borderRadius: "10px", backgroundColor: "#1b1b1b", position: "relative" },
   dropdown: { 
-    position: "absolute", top: "70px", left: "5%", right: "5%", 
+    position: "absolute", top: "70px", left: "0", right: "0", 
     background: "#222", border: "2px solid #4caf50", zIndex: 9999, 
-    maxHeight: "200px", overflowY: "auto", borderRadius: "5px", boxShadow: "0px 4px 15px rgba(0,0,0,0.5)"
+    maxHeight: "200px", overflowY: "auto", borderRadius: "5px", boxShadow: "0px 4px 20px rgba(0,0,0,0.8)" 
   },
   resultItem: { padding: "12px", borderBottom: "1px solid #333", cursor: "pointer", color: "white", textAlign: "left" }
 };
 
 const CHALLENGES = [{
-  date: "2026-02-26", stat: "PASS_YD", 
+  date: "2026-02-26", 
+  stat: "PASS_YD", 
   prompts: [
-    { text: "1999-2026 | Under 15 Passing TDs", maxTD: 14, startYear: 1999, endYear: 2026 },
-    { text: "1999-2026 | 15+ Interceptions", minInt: 15, startYear: 1999, endYear: 2026 },
-    { text: "1999-2026 | 300+ Rushing Yards", minRush: 300, startYear: 1999, endYear: 2026 },
-    { text: "1999-2026 | 1+ Receptions on the year", minRec: 1, startYear: 1999, endYear: 2026 },
-    { text: "1999-2026 | Under 8 Games Played", maxGP: 7, startYear: 1999, endYear: 2026 },
-    { text: "1999-2026 | Under 3,000 Passing Yards", maxPass: 2999, startYear: 1999, endYear: 2026 }
+    { text: "1999-2026 | Under 15 Passing TDs", maxTD: 14, start: 1999, end: 2026 },
+    { text: "1999-2026 | 15+ Interceptions", minInt: 15, start: 1999, end: 2026 },
+    { text: "1999-2026 | 300+ Rushing Yards", minRush: 300, start: 1999, end: 2026 },
+    { text: "1999-2026 | 1+ Receptions on the year", minRec: 1, start: 1999, end: 2026 },
+    { text: "1999-2026 | Under 8 Games Played", maxGP: 7, start: 1999, end: 2026 },
+    { text: "1999-2026 | Under 3,000 Passing Yards", maxPass: 2999, start: 1999, end: 2026 }
   ]
 }];
 
-const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, targetStat, onWrongGuess, nflData }) => {
+const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, nflData, onWrongGuess }) => {
   const [query, setQuery] = useState("");
   const [tempPlayer, setTempPlayer] = useState(null);
   const [error, setError] = useState("");
 
-  // DEBUG: This filters the player list.
-  // UPDATED SEARCH LOGIC
   const playerList = useMemo(() => {
     if (!nflData || nflData.length === 0 || query.length < 3) return [];
-    
-    // We search for ANY variation of the name key
-    const names = Array.from(new Set(nflData.map(s => 
-      s.PLAYER_NAME || s.player_name || s.player_display_name
-    ).filter(Boolean)));
-    
-    return names.filter(name => 
-      name.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 10);
+    const names = Array.from(new Set(nflData.map(s => s.PLAYER_NAME || s.player_name || s.player_display_name).filter(Boolean)));
+    return names.filter(n => n.toLowerCase().includes(query.toLowerCase())).slice(0, 10);
   }, [query, nflData]);
 
-  // UPDATED SEASON SELECTION
   const playerSeasons = useMemo(() => {
     if (!tempPlayer || !nflData) return [];
-    return nflData.filter(s => 
-      (s.PLAYER_NAME || s.player_name || s.player_display_name) === tempPlayer
-    ).sort((a, b) => (b.SEASON || b.season) - (a.SEASON || a.season));
+    return nflData.filter(s => (s.PLAYER_NAME || s.player_name || s.player_display_name) === tempPlayer)
+                  .sort((a, b) => (b.SEASON || b.season) - (a.SEASON || a.season));
   }, [tempPlayer, nflData]);
 
-  const handleSelection = (seasonData) => {
-    const year = parseInt(seasonData.SEASON || "0");
+  const handleSelection = (s) => {
+    const year = parseInt(s.SEASON || s.season || 0);
+    const pYd = parseInt(s.PASS_YD || s.passing_yards || 0);
+    const pTd = parseInt(s.PASS_TD || s.passing_tds || 0);
+    const pInt = parseInt(s.INT || s.interceptions || 0);
+    const rYd = parseInt(s.RUSH_YD || s.rushing_yards || 0);
+    const rec = parseInt(s.REC || s.receptions || 0);
+    const gp = parseInt(s.GP || s.games || 0);
+
     let msg = "";
-    if (year < config.startYear || year > config.endYear) msg = "Wrong Era!";
-    else if (config.maxTD !== undefined && seasonData.PASS_TD > config.maxTD) msg = "Too many Passing TDs!";
-    else if (config.minInt !== undefined && seasonData.INT < config.minInt) msg = "Need more INTs!";
-    else if (config.minRush !== undefined && seasonData.RUSH_YD < config.minRush) msg = "Not enough Rush Yds!";
-    else if (config.minRec !== undefined && seasonData.REC < config.minRec) msg = "Need a catch!";
-    else if (config.maxGP !== undefined && seasonData.GP > config.maxGP) msg = "Too many games!";
-    else if (config.maxPass !== undefined && seasonData.PASS_YD > config.maxPass) msg = "Too many Pass Yds!";
+    if (year < config.start || year > config.end) msg = "Wrong Era!";
+    else if (config.maxTD && pTd > config.maxTD) msg = "Too many TDs!";
+    else if (config.minInt && pInt < config.minInt) msg = "Need more INTs!";
+    else if (config.minRush && rYd < config.minRush) msg = "Not enough Rush Yds!";
+    else if (config.minRec && rec < config.minRec) msg = "Need a catch!";
+    else if (config.maxGP && gp > config.maxGP) msg = "Too many games!";
+    else if (config.maxPass && pYd > config.maxPass) msg = "Too many Pass Yds!";
 
     if (msg) { setError(msg); onWrongGuess(); return; }
-    onScoreUpdate(parseInt(seasonData[targetStat] || 0, 10));
-    setIsLocked(seasonData);
+    onScoreUpdate(pYd);
+    setIsLocked({ name: tempPlayer, season: year, score: pYd });
   };
 
   return (
     <div style={styles.slot}>
-      <p style={{ fontSize: "0.7rem", color: "#888", textAlign: "left", margin: "0 0 10px 0" }}>SLOT {slotNumber} • {config.text}</p>
-      
+      <p style={{ fontSize: "0.7rem", color: "#888", textAlign: "left", margin: "0 0 5px 0" }}>SLOT {slotNumber} • {config.text}</p>
       {!isLocked ? (
-        <>
+        <div style={{ position: "relative" }}>
           {!tempPlayer ? (
-            <div style={{ position: "relative" }}>
+            <>
               <input 
-                placeholder="Search (e.g. Manning)..." 
+                placeholder="Type 3+ letters..." 
                 value={query} 
                 onChange={(e) => { setQuery(e.target.value); setError(""); }} 
-                style={{ width: "100%", padding: "12px", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white" }} 
+                style={{ width: "100%", padding: "12px", borderRadius: "5px", border: "1px solid #444", background: "#222", color: "white", boxSizing: "border-box" }} 
               />
               {playerList.length > 0 && (
                 <div style={styles.dropdown}>
@@ -91,27 +87,21 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
                   ))}
                 </div>
               )}
-            </div>
+            </>
           ) : (
             <div>
               <p style={{ color: "#4caf50", margin: "5px 0" }}>{tempPlayer} <span onClick={() => setTempPlayer(null)} style={{ cursor: "pointer", fontSize: "0.7rem", color: "#888", marginLeft: "10px" }}>[RESET]</span></p>
-              <select 
-                style={{ width: "100%", padding: "10px", background: "#333", color: "white", border: "none", borderRadius: "5px" }} 
-                onChange={(e) => handleSelection(playerSeasons[e.target.value])} 
-                defaultValue=""
-              >
-                <option value="" disabled>Pick a Year</option>
-                {playerSeasons.map((s, idx) => (
-                  <option key={idx} value={idx}>{s.SEASON} - {s.TEAM}</option>
-                ))}
+              <select style={{ width: "100%", padding: "10px", background: "#333", color: "white", borderRadius: "5px" }} onChange={(e) => handleSelection(playerSeasons[e.target.value])} defaultValue="">
+                <option value="" disabled>Select Year</option>
+                {playerSeasons.map((s, idx) => <option key={idx} value={idx}>{(s.SEASON || s.season)} - {(s.TEAM || s.team || s.recent_team)}</option>)}
               </select>
             </div>
           )}
           {error && <p style={{ color: "#ff4444", fontSize: "0.7rem", marginTop: "5px" }}>{error}</p>}
-        </>
+        </div>
       ) : (
         <div style={{ textAlign: "left" }}>
-          <p style={{ margin: 0 }}><b>{isLocked.PLAYER_NAME}</b> ({isLocked.SEASON}) <span style={{ float: "right", color: "#4caf50" }}>+{isLocked[targetStat]}</span></p>
+          <p style={{ margin: 0 }}><b>{isLocked.name}</b> ({isLocked.season}) <span style={{ float: "right", color: "#4caf50" }}>+{isLocked.score}</span></p>
         </div>
       )}
     </div>
@@ -128,34 +118,23 @@ export default function App() {
   useEffect(() => {
     fetch("/balledge_nfl_dataset.json")
       .then(res => res.json())
-      .then(data => {
-        console.log("Data Loaded:", data.length);
-        setNflData(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Fetch Error:", err);
-        setLoading(false);
-      });
+      .then(data => { setNflData(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ color: "white", textAlign: "center", padding: "50px" }}>Scouting NFL Personnel...</div>;
+  if (loading) return <div style={{ color: "white", textAlign: "center", padding: "50px" }}>Loading NFL Personnel...</div>;
 
   return (
     <div style={styles.container}>
       <h2 style={styles.header}>BALLEDGEMAXXING NFL</h2>
-      <div style={styles.badge}>
-        <span style={{ fontSize: "0.7rem", color: "#4caf50", fontWeight: "bold" }}>GOAL: MAX PASSING YARDS</span>
-      </div>
-      
+      <div style={styles.badge}><span style={{ fontSize: "0.7rem", color: "#4caf50", fontWeight: "bold" }}>GOAL: MAX PASSING YARDS</span></div>
       <div style={styles.scoreBox}>
         <h1 style={{ color: "#4caf50", margin: 0, fontSize: "3.5rem" }}>{totalScore}</h1>
-        <p style={{ fontSize: "0.7rem", color: "#888" }}>MISSES: {wrongGuesses} | DATABASE: {nflData.length} PLAYERS</p>
+        <p style={{ fontSize: "0.7rem", color: "#888" }}>MISSES: {wrongGuesses} | DATABASE: {nflData.length}</p>
       </div>
-
       {CHALLENGES[0].prompts.map((config, i) => (
         <StatSlot 
-          key={i} slotNumber={i + 1} config={config} targetStat="PASS_YD" nflData={nflData} 
+          key={i} slotNumber={i + 1} config={config} nflData={nflData} 
           isLocked={slotsLocked[i]} 
           setIsLocked={(s) => { const n = [...slotsLocked]; n[i] = s; setSlotsLocked(n); }}
           onScoreUpdate={(v) => setTotalScore(prev => prev + v)}
@@ -165,4 +144,3 @@ export default function App() {
     </div>
   );
 }
-
