@@ -32,17 +32,26 @@ const StatSlot = ({ slotNumber, config, onScoreUpdate, isLocked, setIsLocked, ta
   const [error, setError] = useState("");
 
   // DEBUG: This filters the player list.
+  // UPDATED SEARCH LOGIC
   const playerList = useMemo(() => {
     if (!nflData || nflData.length === 0 || query.length < 3) return [];
     
-    // Get unique names and filter by query
-    const names = Array.from(new Set(nflData.map(s => s.PLAYER_NAME).filter(Boolean)));
-    return names.filter(name => name.toLowerCase().includes(query.toLowerCase())).slice(0, 10);
+    // We search for ANY variation of the name key
+    const names = Array.from(new Set(nflData.map(s => 
+      s.PLAYER_NAME || s.player_name || s.player_display_name
+    ).filter(Boolean)));
+    
+    return names.filter(name => 
+      name.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, 10);
   }, [query, nflData]);
 
+  // UPDATED SEASON SELECTION
   const playerSeasons = useMemo(() => {
     if (!tempPlayer || !nflData) return [];
-    return nflData.filter(s => s.PLAYER_NAME === tempPlayer).sort((a, b) => b.SEASON - a.SEASON);
+    return nflData.filter(s => 
+      (s.PLAYER_NAME || s.player_name || s.player_display_name) === tempPlayer
+    ).sort((a, b) => (b.SEASON || b.season) - (a.SEASON || a.season));
   }, [tempPlayer, nflData]);
 
   const handleSelection = (seasonData) => {
@@ -156,3 +165,4 @@ export default function App() {
     </div>
   );
 }
+
